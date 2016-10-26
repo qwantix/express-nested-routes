@@ -11,12 +11,28 @@ function loadRouteMap( app, map, ctx ) {
     methods = methods || [ ctx.method ];
     methods.forEach( function( method ) {
       if( map[k] instanceof Array ) {
-        app[ method ].apply( app, [ route ].concat( map[k] ) );
+        var lastItem = map[k].pop();
+        var middlewares = (ctx.middlewares || []).concat( map[k] );
+        if( typeof lastItem === 'function' ) {
+          console.log( 'Register route with middlewares', method, route );
+          app[ method ]( route, middlewares.concat([ lastItem ]) );
+        }
+        else if( typeof lastItem === 'object' ) {
+          loadRouteMap( app, lastItem, {
+            route: route,
+            method: method || ctx.method,
+            middlewares: middlewares
+          });
+        }
+        else {
+          throw 'Unsupported object type at end of route array';
+        }
       }
       else if( typeof map[k] === 'object' ) {
         loadRouteMap( app, map[k], {
           route: route,
-          method: method || ctx.method
+          method: method || ctx.method,
+          middlewares: ctx.middlewares
         });
       }
       else if( typeof map[k] === 'function' ) {
